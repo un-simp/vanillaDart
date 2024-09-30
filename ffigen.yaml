@@ -1,0 +1,21 @@
+# Run with `dart run ffigen --config ffigen.yaml`.
+name: VanillaDartBindings
+description: |
+  Bindings for `src/vanilla_dart.h`.
+
+  Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
+output: 'lib/vanilla_dart_bindings_generated.dart'
+headers:
+  entry-points:
+    - '/home/un/vanilla/lib/vanilla.h'
+  include-directives:
+    - '/home/un/vanilla/lib/vanilla.h'
+preamble: |
+  // ignore_for_file: always_specify_types
+  // ignore_for_file: camel_case_types
+  // ignore_for_file: non_constant_identifier_names
+comments:
+  style: any
+  length: full
+compiler-opts:
+  - '-I/usr/lib/clang/18/include'
