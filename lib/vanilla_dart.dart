@@ -18,15 +18,12 @@
 
 // bindings
 import 'dart:async';
-import 'dart:convert';
-import 'dart:ffi';
-import 'dart:ffi';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 import 'vanilla_dart_bindings_generated.dart';
 
-const String _libName = 'vanilla_dart';
+const String _libName = 'vanilla';
 final DynamicLibrary _dylib = () {
   if (Platform.isMacOS || Platform.isIOS) {
     return DynamicLibrary.open('$_libName.framework/$_libName');
@@ -43,11 +40,10 @@ final DynamicLibrary _dylib = () {
 /// The bindings to the native functions in [_dylib].
 final VanillaDartBindings _bindings = VanillaDartBindings(_dylib);
 
-// this is what our client / business logic will instantiate and communicate with
+// this is what our client  instantiate and communicate with
 class Backend{
   final SendPort _commands;
   final ReceivePort _responses;
-  final Completer<void> _isolateReady = Completer.sync();
   // for multi-requests
   final Map<int, Completer<Object?>> _activeRequests = {};
   int _idCounter=0;
@@ -150,8 +146,9 @@ class IsolateBackend{
     switch (message['operation']) {
       case 'connect':
         final serverAddress = message['pipeAddress'];
-        final port = message['pipePort'];
-        return connectToConsole(serverAddress, int.parse(port));
+        // not sure how ports work yet so stubbing this
+        // final port = message['pipePort'];
+        return connectToConsole(serverAddress);
 
     }
     return 0;
@@ -159,31 +156,28 @@ class IsolateBackend{
 
   }
 // next implement an event handler for vanilla
-  int connectToConsole(String serverAddress, int port){
-    // var consoleConnection = _bindings.vanilla_start_udp(Pointer.fromFunction(eventHandler), Pointer.fromAddress(this.port.nativePort), stripIP(serverAddress));
-    return 1;
+  int connectToConsole(String serverAddress){
+    return _bindings.vanilla_start_udp(Pointer.fromFunction(eventHandler), Pointer.fromAddress(this.port.nativePort), stripIP(serverAddress));
+  }
+
+  void endConsoleConnection(){
+    _bindings.vanilla_stop();
   }
 
   static void eventHandler(Pointer<Void> context, int eventType, Pointer<Char> data, int dataSize){
-    // TODO: implement eventHandler
-   // ReceivePort isolatePort = ReceivePort.fromRawReceivePort(context.address);
-
-
-    switch (eventType){
-      case VanillaEvent.VANILLA_EVENT_AUDIO:
-        break;
-      case VanillaEvent.VANILLA_EVENT_VIBRATE:
-        break;
-      case VanillaEvent.VANILLA_EVENT_VIDEO:
-        break;
-    }
-   // port.send({'event': eventType, 'data': data.toString(), 'dataSize': dataSize});
-
-
-
-
-    throw UnimplementedError();
+    // convert the ports from our context then send any event we get and let the port receiver deal with it
+   ReceivePort isolatePort = ReceivePort.fromRawReceivePort(context as RawReceivePort);
+   SendPort sendPort = isolatePort.sendPort;
+   sendPort.send({'event': eventType, 'data': data.toString(), 'dataSize': dataSize});
   }
+
+}
+
+class GamePad{
+
+
+
+
 }
 
 

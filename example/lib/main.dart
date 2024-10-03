@@ -1,5 +1,5 @@
 
-import 'package:vanilla_dart/vanilla_dart.dart';
+import '../../lib/vanilla_dart.dart';
 
 void main() async {
  // start the isolate/vanilla
