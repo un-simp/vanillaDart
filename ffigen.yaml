@@ -4,7 +4,7 @@ description: |
   Bindings for `src/vanilla_dart.h`.
 
   Regenerate bindings with `dart run ffigen --config ffigen.yaml`.
-output: 'lib/vanilla_dart_bindings_generated.dart'
+output: 'lib/vanilla_ffigen.dart'
 headers:
   entry-points:
     - 'vanilla/lib/vanilla.h'
