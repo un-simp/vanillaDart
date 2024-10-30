@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:vanillaDart/communication.dart';
 void main() async{
   final worker = await VanillaCommunication.spawn();
@@ -15,6 +14,7 @@ void main() async{
   // var audio = await worker.sendMsg("audioTest");
   // var outFile = File("/home/un/out.mp3");
   //outFile.writeAsBytes(audio.result);
+  print(Directory.current);
   var connection = await worker.sendMsg("connect");
   print(connection);
 

@@ -28,7 +28,7 @@ import 'package:vanillaDart/vanilla_ffigen.dart';
 
 class VanillaIsolate {
   late final VanillaDartBindings _bindings;
-  late SendPort _port;
+  late SendPort _sendPort;
   
   // Loads the library on instantiation
   VanillaIsolate(SendPort port) {
@@ -46,10 +46,10 @@ class VanillaIsolate {
     }();
     // The bindings to the native functions in [_dylib].
     _bindings = VanillaDartBindings(dylib);
-    _port = port;
+    _sendPort = port;
   }
   
-  void messageHandler(Map<String, dynamic> message) {
+  void messageHandler(Map<String, dynamic> message)  {
     try {
       final request = Request.fromJson(message);
       final int id = request.id;
@@ -58,30 +58,37 @@ class VanillaIsolate {
   
       switch (command) {
         case 'connect':
-          _port.send(Response(id: id, command: "connect", result: vanillaStart()).toJson());
+          print("starting vanilla");
+          var res = vanillaStart();
+          _sendPort.send(Response(id: id, command: "connect", result: res).toJson());
           break;
         case 'audioTest':
           final file = File("/home/un/Music/courage.mp3");
-          _port.send(Response(id: id, command: "audioData",result: Uint8List.fromList(file.readAsBytesSync())).toJson());
+          _sendPort.send(Response(id: id, command: "audioData",result: Uint8List.fromList(file.readAsBytesSync())).toJson());
           break;
         default:
-          _port.send(Response(id: id, command: 'error', result: 'Unknown command: $command').toJson());
+          _sendPort.send(Response(id: id, command: 'error', result: 'Unknown command: $command').toJson());
           break;
       }
     } catch (e, stack) {
       final int id = message['id'];
-      _port.send(Response(id: id, command: 'error', result: RemoteError(e.toString(), stack.toString())).toJson());
+      _sendPort.send(Response(id: id, command: 'error', result: RemoteError(e.toString(), stack.toString())).toJson());
     }
   }
   
-  int vanillaStart(){
+  int vanillaStart() {
     final eventHandlerPointer = Pointer.fromFunction<vanilla_event_handler_tFunction>(eventHandler);
-    return _bindings.vanilla_start(eventHandlerPointer, nullptr);
+   print(_bindings.vanilla_start(eventHandlerPointer, nullptr));
+    print("started vanilla");
+    return 1;
   }
 
   static void eventHandler(Pointer<Void> context, int event_type, Pointer<Char> data, int data_size){
+    print("message recieved");
     final message = data.toString();
     print('Event type: $event_type, Data: $message, Size: $data_size');
   }
+
+
 
 }

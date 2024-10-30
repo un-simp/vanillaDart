@@ -11,9 +11,9 @@ else
    echo "ERROR: YOU DID NOT CLONE WITH SUBMODULES. RUN git submodule init --update AND RETRY"
    exit 1
 fi
-# running binding generation
-echo "RUNNING FFIGEN"
-dart run ffigen --config ffigen.yaml
+## running binding generation
+#echo "RUNNING FFIGEN"
+#dart run ffigen --config ffigen.yaml
 # build cli
 # echo "BUILDING CLI"
 echo "COMPLETE"
