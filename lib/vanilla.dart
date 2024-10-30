@@ -18,8 +18,6 @@
 import 'package:vanillaDart/communication.dart';
 
 class Vanilla{
-  // communication object
-  VanillaCommunication comm = VanillaCommunication();
 
 
 }

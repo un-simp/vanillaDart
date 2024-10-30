@@ -20,16 +20,18 @@
 
 import 'dart:ffi';
 import 'dart:io';
-
+import 'dart:isolate';
+import 'dart:typed_data';
+import 'package:vanillaDart/util/Requests/request.dart';
+import 'package:vanillaDart/util/Responses/response.dart';
 import 'package:vanillaDart/vanilla_ffigen.dart';
 
-class VanillaIsolate{
+class VanillaIsolate {
   late final VanillaDartBindings _bindings;
-
-
-  // loads the library on instantiation
-  VanillaIsolate(){
-
+  late SendPort _port;
+  
+  // Loads the library on instantiation
+  VanillaIsolate(SendPort port) {
     final DynamicLibrary dylib = () {
       if (Platform.isMacOS || Platform.isIOS) {
         return DynamicLibrary.open('vanilla.framework/vanilla');
@@ -42,17 +44,44 @@ class VanillaIsolate{
       }
       throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
     }();
-    /// The bindings to the native functions in [_dylib].
+    // The bindings to the native functions in [_dylib].
     _bindings = VanillaDartBindings(dylib);
-
-
-
-
-
-
-
+    _port = port;
+  }
+  
+  void messageHandler(Map<String, dynamic> message) {
+    try {
+      final request = Request.fromJson(message);
+      final int id = request.id;
+      final String command = request.command;
+      final dynamic data = request.data;
+  
+      switch (command) {
+        case 'connect':
+          _port.send(Response(id: id, command: "connect", result: vanillaStart()).toJson());
+          break;
+        case 'audioTest':
+          final file = File("/home/un/Music/courage.mp3");
+          _port.send(Response(id: id, command: "audioData",result: Uint8List.fromList(file.readAsBytesSync())).toJson());
+          break;
+        default:
+          _port.send(Response(id: id, command: 'error', result: 'Unknown command: $command').toJson());
+          break;
+      }
+    } catch (e, stack) {
+      final int id = message['id'];
+      _port.send(Response(id: id, command: 'error', result: RemoteError(e.toString(), stack.toString())).toJson());
+    }
+  }
+  
+  int vanillaStart(){
+    final eventHandlerPointer = Pointer.fromFunction<vanilla_event_handler_tFunction>(eventHandler);
+    return _bindings.vanilla_start(eventHandlerPointer, nullptr);
   }
 
-
+  static void eventHandler(Pointer<Void> context, int event_type, Pointer<Char> data, int data_size){
+    final message = data.toString();
+    print('Event type: $event_type, Data: $message, Size: $data_size');
+  }
 
 }

@@ -17,75 +17,100 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:isolate';
 
-class VanillaCommunication{
+import 'package:vanillaDart/util/Requests/request.dart';
+import 'package:vanillaDart/util/Responses/response.dart';
+import 'package:vanillaDart/vanillaIsolate.dart';
+import 'package:vanillaDart/vanilla_ffigen.dart';
 
+class VanillaCommunication {
   final SendPort _commands;
   final ReceivePort _responses;
-  final Map<int,Completer<Object?>> _activeRequests = {};
+  final Map<int, Completer<Response>> _activeRequests = {};
   int _idCounter = 0;
+  bool _closed = false;
 
-  Future<Object?> parseJson(String message) async {
-    final completer = Completer<Object?>.sync();
+  Future<Response> sendMsg(String command, {dynamic data}) async {
+    if (_closed) throw StateError("CLOSED");
+    final completer = Completer<Response>.sync();
     final id = _idCounter++;
     _activeRequests[id] = completer;
-    _commands.send((id,message));
+    final request = Request(id: id, command: command, data: data);
+
+    _commands.send(request.toJson());
     return await completer.future;
   }
 
   static Future<VanillaCommunication> spawn() async {
     final initPort = RawReceivePort();
-    final connection = Completer<(ReceivePort,SendPort)>.sync();
-    initPort.handler = (initialMessage){
+    final connection = Completer<(ReceivePort, SendPort)>.sync();
+    initPort.handler = (initialMessage) {
       final commandPort = initialMessage as SendPort;
-      connection.complete((ReceivePort.fromRawReceivePort(initPort),commandPort));
+      connection.complete((ReceivePort.fromRawReceivePort(initPort), commandPort));
     };
-    // attempt isolate spawn
-    try
-    {
-      await Isolate.spawn(_startRemoteIsolate,(initPort.sendPort));
-    } on Object
-    {
+
+    // Attempt to spawn isolate
+    try {
+      await Isolate.spawn(_startRemoteIsolate, (initPort.sendPort));
+    } on Object {
       initPort.close();
       rethrow;
     }
-    final (ReceivePort recievePort, SendPort sendPort) = await connection.future;
 
-    return VanillaCommunication._(recievePort,sendPort);
+    final (ReceivePort receivePort, SendPort sendPort) = await connection.future;
 
+    return VanillaCommunication._(receivePort, sendPort);
   }
 
-
-  VanillaCommunication._(this._responses, this._commands){
+  VanillaCommunication._(this._responses, this._commands) {
     _responses.listen(_handleResponsesFromIsolate);
   }
 
+  void _handleResponsesFromIsolate(dynamic message) {
+    assert(message is Map<String, dynamic>);
+    final response = Response.fromJson(message);
+    final completer = _activeRequests.remove(response.id)!;
 
-void _handleResponsesFromIsolate(dynamic message){
-    if (message is RemoteError){
-      throw message;
+    if (response.result is RemoteError) {
+      completer.completeError(response.result);
     } else {
-      print(message);
+      _responseHandler(response);
+      completer.complete(response);
     }
+  }
+  void _responseHandler(Response response){
 
-}
-static void _handleCommandsToIsolate(ReceivePort rp, SendPort sp) async{
+    // switch (response.command){
+    //   case VanillaEvent.VANILLA_EVENT_VIDEO:
+    //
+    // }
+    return;
+  }
+  static void _handleCommandsToIsolate(ReceivePort rp, SendPort sp) {
+    VanillaIsolate handler = VanillaIsolate(sp);
     rp.listen((message) {
-      try{
-        final jsonData = jsonDecode(message as String);
-        sp.send(jsonData)
-      } catch (e){
-        sp.send(RemoteError(e.toString(),''));
+      if (message is Map<String, dynamic> && message['command'] == 'shutdown') {
+        rp.close();
+        return;
       }
+      handler.messageHandler(message);
     });
+  }
 
-}
-static void _startRemoteIsolate(SendPort sp){
+  static void _startRemoteIsolate(SendPort sp) {
     final receivePort = ReceivePort();
-    // give main isolate the sendport
+    // Give main isolate the sendport
     sp.send(receivePort.sendPort);
-}
+    _handleCommandsToIsolate(receivePort, sp);
+  }
 
+  void close() {
+    if (!_closed) {
+      _closed = true;
+      _commands.send(Request(id: 0, command: "shutdown").toJson());
+      if (_activeRequests.isEmpty) _responses.close();
+      print("PORT CLOSED");
+    }
+  }
 }
