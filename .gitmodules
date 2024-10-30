@@ -1,3 +1,4 @@
 [submodule "vanilla"]
 	path = vanilla
 	url = https://github.com/vanilla-wiiu/vanilla
+	branch = event-loop
