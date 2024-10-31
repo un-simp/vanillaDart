@@ -16,7 +16,11 @@ void main() async{
   //outFile.writeAsBytes(audio.result);
   print(Directory.current);
   var connection = await worker.sendMsg("connect");
-  print(connection);
+  print(connection.result);
+  sleep(Duration(seconds: 10));
+  await worker.sendMsg("stop");
+  print("ended");
+
 
 
 }

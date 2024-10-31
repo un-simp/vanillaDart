@@ -29,6 +29,7 @@ import 'package:vanillaDart/vanilla_ffigen.dart';
 class VanillaIsolate {
   late final VanillaDartBindings _bindings;
   late SendPort _sendPort;
+  //late final NativeCallable<vanilla_event_handler_tFunction> eventHandlerCallable;
   
   // Loads the library on instantiation
   VanillaIsolate(SendPort port) {
@@ -58,10 +59,12 @@ class VanillaIsolate {
   
       switch (command) {
         case 'connect':
-          print("starting vanilla");
           var res = vanillaStart();
           _sendPort.send(Response(id: id, command: "connect", result: res).toJson());
           break;
+        case "stop":
+          vanillaStop();
+          _sendPort.send(Response(id: id, command: "stop").toJson());
         case 'audioTest':
           final file = File("/home/un/Music/courage.mp3");
           _sendPort.send(Response(id: id, command: "audioData",result: Uint8List.fromList(file.readAsBytesSync())).toJson());
@@ -77,16 +80,19 @@ class VanillaIsolate {
   }
   
   int vanillaStart() {
-    final eventHandlerPointer = Pointer.fromFunction<vanilla_event_handler_tFunction>(eventHandler);
-   print(_bindings.vanilla_start(eventHandlerPointer, nullptr));
-    print("started vanilla");
-    return 1;
+    //final eventHandlerPointer = Pointer.fromFunction<vanilla_event_handler_tFunction>(eventHandler);
+    return _bindings.vanilla_start(2130706433);
   }
 
   static void eventHandler(Pointer<Void> context, int event_type, Pointer<Char> data, int data_size){
     print("message recieved");
     final message = data.toString();
     print('Event type: $event_type, Data: $message, Size: $data_size');
+  }
+
+  void vanillaStop(){
+    //eventHandlerCallable.close();
+    return _bindings.vanilla_stop();
   }
 
 

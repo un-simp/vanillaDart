@@ -22,8 +22,6 @@ import 'dart:isolate';
 import 'package:vanillaDart/util/Requests/request.dart';
 import 'package:vanillaDart/util/Responses/response.dart';
 import 'package:vanillaDart/vanillaIsolate.dart';
-import 'package:vanillaDart/vanilla_ffigen.dart';
-
 class VanillaCommunication {
   final SendPort _commands;
   final ReceivePort _responses;
@@ -81,10 +79,11 @@ class VanillaCommunication {
   }
   void _responseHandler(Response response){
 
-    // switch (response.command){
-    //   case VanillaEvent.VANILLA_EVENT_VIDEO:
-    //
-    // }
+    switch (response.command){
+      case "stop":
+        close();
+
+    }
     return;
   }
   static void _handleCommandsToIsolate(ReceivePort rp, SendPort sp) {
